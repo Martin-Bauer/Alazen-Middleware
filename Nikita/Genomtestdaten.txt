@@ -1,6 +1,0 @@
-Quelle1 2 Mut1
-Quelle1 3 Mut2
-Quelle1 4 Mut3
-Quelle2 5 Mut4
-Quelle2 3 Mut5
-Quelle2 1 Mut6
