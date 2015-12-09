@@ -1,0 +1,82 @@
+\documentclass[]{article}
+
+
+
+%opening
+\title{Testfaelle GeneTranslator, IndexController}
+\author{}
+
+\begin{document}
+
+\maketitle
+
+\section{IndexController}
+\subsection{Testfall 1 - answerQuery - einfache Intervallanfrage}
+Eingabe: 1,3,100,200\\
+Ausgabe: zum Intervall gehörende Mutationsobjekte 
+
+\subsection{Testfall 2 - answerQuery - komplexere Intervallanfrage}
+Eingabe: 1,3,100,200 ; 1,3,150,350\\
+Ausgabe: eine Mutationsliste mit den Ergebnissen beider Anfragen
+
+\subsection{Testfall 3 - answerQuery - unvollständige Intervallanfrage}
+Eingabe: 1,100,200\\
+Ausgabe: Fehlermeldung über unvollständige Anfrage
+
+\subsection{Testfall 4 - answerQuery - leere Anfrage}
+Eingabe: [...]\\
+Ausgabe: Fehlermeldung über leere Anfrage
+
+\subsection{Testfall 5 - answerQuery - überspezifizierte Intervallanfrage}
+Eingabe: 1,3,100,200,300,400\\
+Ausgabe: Fehlermeldung über überspezifizierte Anfrage
+
+\subsection{Testfall 6 - buildIndex - erfolgreicher Indexaufbau}
+Eingabe: [...] (Datenbank ist erreichbar)
+Ausgabe: Erfolgreich gebauter Index
+
+\subsection{Testfall 7 - buildIndex - erfolgloser Indexaufbau}
+Eingabe: [...] (Datenbank ist nicht erreichbar)
+Ausgabe: Fehlermeldung über erfolglosen Indexaufbau
+\newpage
+\section{GeneTranslator}
+Der GeneTranslator hat 2 Aufgaben. Zum einen soll er während der Indexerstellung mit Inhalt (also Gennamen und zugeörigen Intervallen) befüllt werden, zum anderen soll eine Suche nach Gennamen in ihm möglich sein.
+
+\subsection{Testfall 1 - addGene - Einfügen in Datenstruktur}
+Eingabe: Testgen, 350, 500\\
+Ausgabe: das Gen sollte in den Baum eingefügt sein und per searchForGene() findbar sein
+
+\subsection{Testfall 2 - addGene - Doppeltes Einfügen in Datenstruktur}
+Eingabe: Testgen, 350, 500\\
+		 Testgen, 350, 500\\
+Ausgabe: das Gen sollte nur einmal in die Datenstruktur eingefügt werden. Ausgabe, dass das Gen bereits in der Struktur vorhanden ist.
+
+\subsection{Testfall 3 - addGene - Aufruf ohne Parameter}
+Eingabe: [...]\\
+Ausgabe: Fehlermeldung über  parameterlosen Aufruf
+
+\subsection{Testfall 4 - tranlateToIntervall - erfolgreiche Suche}
+Eingabe: Testgen (befindet sich bereits in Datenstruktur)\\
+Ausgabe: 350, 500
+
+\subsection{Testfall 5 - tranlateToIntervall - erfolglose Suche}
+Eingabe: Testgen2 (befindet sich nich in Datenstruktur)\\
+Ausgabe: Fehlermeldung über erfolglose Suche
+
+\subsection{Testfall 6 - tranlateToIntervall - Aufruf ohne Parameter}
+Eingabe: [...]\\
+Ausgabe: Fehlermeldung über Parameterlosen Aufruf
+
+\subsection{Testfall 7 - completeGeneName - erfolgreiche Suche mit einem Ergebnis}
+Eingabe: Test (Testgen1 befindet sich bereits in Datenstruktur)\\
+Ausgabe: Testgen1
+
+\subsection{Testfall 8 - completeGeneName - erfolgreiche Suche mit mehreren Ergebnissen}
+Eingabe: Test (Testgen1 und Testgen2 befinden sich bereits in Datenstruktur)\\
+Ausgabe: Testgen1, Testgen2
+
+\subsection{Testfall 9 - completeGeneName - erfolglose Suche}
+Eingabe: Test (Es befindet sich kein Gen mit Präfix Test in der Datenstruktur)\\
+Ausgabe: Fehlermeldung über erfolglose Suche
+\end{document}
+

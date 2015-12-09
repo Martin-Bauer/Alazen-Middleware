@@ -1,0 +1,191 @@
+\documentclass[]{article}
+
+\usepackage[]{algorithm2e}
+\usepackage[utf8]{inputenc}
+
+%opening
+\title{Semesterprojekt - Formale Beschreibung der Middleware}
+
+\begin{document}
+
+\maketitle
+\section{Index}
+\subsection{Anforderungen}
+Der Index soll eine effiziente Suche nach Mutationen für das Frontend ermöglichen. Während des Programmstarts wird der Index aus der vorhandenen Datenbank aufgebaut und steht dann so lange zur Verfügung, bis das Programm beendet wird.
+Im Index wird mit Intervallgrenzen gesucht und der Index gibt alle Intervalle zurück, die komplett innerhalb des angegebenen Intervalls liegen.\\
+Der Index wird verteilt aufgebaut und liegt auf 4 virtuellen Maschinen verteilt. Die für den Index spezifizierten Funktionen sprechen immer einen Teilindex an. Der Aufruf der Funktionen wird über den IndexController erfolgen, der immer alle 4 Teilindizes ansprechen wird.
+\subsection{Funktionen und Datenstrukturen}
+Die Funktionen des Indexes variieren in ihrerem Ablauf je nach gewählter Indexstruktur. Momentan existieren 3 Varianten, die getestet werden. Es ist nicht ausgeschlossen, dass weitere Strukturen im Laufe der Entwicklung getestet werden. Da die Dauer des Indexaufbaus für den Endnutzer nicht relevant ist hängt die Auswahl der letztendlich genutzten Struktur lediglich von der Geschwindigkeit der Suchanfragen ab.
+Im folgenden werden die Such-und Einfüge-Operationen basierend auf den jeweiligen Indexstrukturen beschrieben
+\newpage
+\subsubsection{IntervallTree}
+In diesem Fall basiert die Indexstruktur auf einem Intervallbaum.\\
+Hierfür wird die frei zugängliche Bibliothek "IntervallST.java" der Universität Princeton genutzt. Beide Funktionen haben hier lediglich die Aufgabe als Interface zu den zugehörigen Bibliotheksfunktionen zu dienen: contains() zur Suche und put() zum Einfügen.\\
+Das Suchergebnis wird nach möglichen Filtern gefiltert. Bei n Intervallen und einer Such-Ergebnisliste der Größe m ergibt sich ein Komplexität von O(log n + m)\\ Die Bibliothek muss noch angepasst werden, damit das Einfügen von gleichen Intervallen möglich ist ohne, dass das zuerst eingefügte Intervall gelöscht wird.
+\begin{algorithm}
+search()\\{
+found intervalls = contains(intervall)\;
+\ForAll{elements in found intervalls}
+{
+{\If{element corresponds to specified filters}
+{add element to answer list\;}
+}
+return answer list\;
+}
+}
+\end{algorithm}
+
+
+\begin{algorithm}
+addMutation()\\{
+\If{mutation is already in index}
+{return "index already contains mutation"\;}
+put()\;
+return "added mutation"\;
+}
+\end{algorithm}
+
+\newpage
+\subsubsection{Suchbaumbasierter Index}
+Da ein Großteil der Intervalle einstellig bzw sehr kurz sind bietet sich ein einfacher binärer Suchbaum als Datenstruktur an.\\
+Dieser wird um einen Iterator erweitert, damit effizient eine Menge an Knoten ausgewählt werden kann.\\
+Hierfür wird die Java-Klasse TreeMap verwendet, die eine Suche in logarithmischer Zeit ermöglicht. Die Ergebnismenge wird einmal durchlaufen, Mutationen deren Endpunkt außerhalb des gesuchten Intervalls liegen werden dabei entfernt und jeder Knoten wird nach den angegebenen Filtern gefiltert. Bei n Intervallen und einer Such-Ergebnismenge von m Intervallen ergibt sich eine Laufzeit von O(log n +m).\\
+Auch in dieser Implementation dienen die Funktionen als Interface zu den jeweiligen Funktionen der genutzten Klasse: submap() zur Suche und put() zum Einfügen von Objekten).
+\begin{algorithm}
+search()\\{
+found intervalls = submap(intervall)\;
+\ForAll{elements in found intervalls}
+{
+{\If{element corresponds to specified filters}
+{add element to answer list\;}
+}
+return answer list\;
+}
+}
+\end{algorithm}
+
+
+\begin{algorithm}
+addMutation()\\{
+\If{mutation is already in index}
+{return "index already contains mutation"\;}
+put()\;
+return "added mutation"\;
+}
+\end{algorithm}
+
+\newpage
+\subsubsection{Arraybasierter Index}
+Sollte die Anzahl der Mutationen groß genug sein, dass sie mit Integer-Variablen darstellbar ist, so bietet sich unter Umständen auch ein arraybasierter Index an.\\
+Dieser speichert alle Mutationen aufsteigend sortiert nach ihrem Anfangspunkt.
+Wird nun nach einem Intervall gesucht, so iteriert er über das Array beginnend bei der Mutation, deren Startwert noch im gesuchten Intervall liegt. Dabei wird für jede Mutation überprüft, ob ihr Endwert noch im gesuchten Intervall liegt. Ist dem so wird sie zur Ergenismenge hinzugefügt. Hierbei können auch direkt die Filter überprüft werden.\\
+Es so lange iteriert, bis der Startwert aller folgenden Mutationen größer, als der vom Nutzer angegebene Endwert ist.\\
+Falls Mutationen an der gleichen Stelle beginnen, so verschieben sich alle folgenden Mutationen in der Liste, da in aufeinanderfolgenden Zellen gleiche Startintervalle gespeichert werden müssen. Es muss also ermittelt werden, wo sich die erste im Intervall liegende Mutation befindet. Ein Verfahren hierfür wird noch ermittelt\\
+Bei m Mutationen, deren Startwert sich im gesuchten Intervall befinden, liegt die Laufzeit bei O(m + $\epsilon$), wobei $\epsilon$ davon abhängt, wie die erste Mutation ermittelt wird. Es kann aber davon ausgegangen werden, dass $\epsilon$ einen geringen Anteil an der Laufzeit ausmachen wird.
+\begin{algorithm}
+search()\\{
+find index x of first mutation that lies in intervall\;
+\While{starting point of mutation at index x lies in search intervall}
+{{\If{endpoint of mutation at index x lies in search intervall and mutation corresponds to specified filters}
+{add mutation to answer list\;}
+}
+x=x+1\;
+}
+return answer list\;}
+
+\end{algorithm}
+
+
+\begin{algorithm}
+addMutation()\\{
+\If{mutation is already in index}
+{return "index already contains mutation"\;}
+insert mutation at corresponding index and adjust array properly\;
+return "added mutation"\;}
+\end{algorithm}
+\newpage
+\section{IndexController}
+\subsection{Anforderungen}
+Der IndexController nimmt Suchanfragen entgegen, leitet diese an die 4 Teilindizes weiter und fügt die Teilergebnisse wieder zusammen.\\Falls eine Anfrage intern in mehrere Teilanfragen aufgeteilt werden sollte, weil z.B. ein Gen, nach dem gesucht wird an mehreren Stellen auftreten kann, leutet der IndexController alle Teilanfragen sequentiell an die Indizes weiter, fügt die Teilergebnisse zusammen und schickt die Ergebnismenge an den QueryReceiver zurück.
+\subsection{Funktionen}
+\subsubsection{answerQuery(int[] intervals,String[] Sources,int[]filter)}
+Die Funktion erhält mehrere Listen als Parameter, die die nötigen Informationen für die einzelnen Anfragen beinhalten. Jeweils 2 aufeinanderfolgende Einträge in der Intervall-Liste beschreiben den Start-und Endpunkt der gesuchten Intervalle. Die Einträge in den anderen Listen werden für alle Anfragen genutzt\\
+Die Anfragen werden sequentiell an die 4 Teilindizes weitergeleitet und einzelnen Ergebnisse konkateniert und in einer Liste zurückgegeben.
+\begin{algorithm}
+\ForAll{queries in parameter list}
+{\ForAll{sub indices}
+{answer list = index.search()\;}
+concatenate all answer lists\;
+}
+concatenate answer lists of each sub query\;
+return answer list\;
+\end{algorithm}
+
+
+\subsubsection{buildIndex()}
+Die Funktion wird bei Programmstart ausgeführt und baut auf Basis der Datenbank die 4 Teilinidzes auf.\\
+Für jede Mutation wird zufällig entschieden in welchen Index sie eingefügt wird.\\
+\begin{algorithm}
+\ForAll{elements in database}
+{\If{element is already in index}
+{skip element\;}
+choose which sub index to insert into\;
+index.addMutation()\;
+}
+return "index built"\;
+\end{algorithm}
+
+\newpage
+\section{Stresstest}
+Der Stresstest hat zum Ziel herauszufinden, wie lange die durchschnittliche Query-Laufzeit ist.\\
+Ziel des Systems ist es eine Laufzeit von unter einer Sekunde zu erreichen.\\
+Um dies zu überprüfen werden mehrere Anfragen der gleichen Art (Intervallsuche, Gennamenssuche, Präfixsuche) sequentiell gestellt und die Antwortzeit gemessen. Alle Anfragen sollen in unter einer Sekunde eine Antwort erzielen.
+
+\end{document}
+
+\newpage
+\section{GeneTranslator}
+\subsection{Anforderungen}
+Der GeneTranslator ist dafür da eine Gennamen-Suche in eine Intervallsuche zu übersetzen. Hierfür werden zum Gennamen die Intervallgrenzen gespeichert und diese suchbar gemacht. Desweiteren soll im GeneTranslator eine Präfixsuche nach Gennamen möglich sein, das heißt die Komponente erhält einen Präfix und gibt alle Gennamen zurück, die mit diesem Präfix beginnen.\\
+Damit diese beiden Anforderungen effizient erfüllt werden können wird als zugrundeliegende Datenstruktur ein Präfix-Baum gewählt.\\
+Es ist noch unklar, ob die Genintervall-Informationen
+\subsection{Funktionen}
+\subsubsection{findGeneIntervall(String name)}
+
+\subsubsection{addGeneIntervall(String name, int begin, int end)}
+
+\subsubsection{completePrefix(String prefix)}
+	
+
+\newpage
+\section{QueryParser}
+\subsection{Anforderungen}
+Der QueryParser stellt die direkte Schnittstelle zum Frontend dar. Er erhält ein JSON-File als Anfrage, stellt fest um was für einen Anfrage-Typ es sich handelt und leitet die Anfrage weiter, nachdem er diese in ein internes Arbeitsformat umgewandelt hat.\\
+Zu den Anfrage-Typen zählen:
+\begin{itemize}
+\item Intervallsuche - der Parser übersetzt die Anfrage und leitet sie an den QueryHandler weiter
+\item Namenssuche - der Parser ruft searchGene(String name) auf und leitet die zurückgegebene Intervallliste an den QueryHandler weiter
+\item Präfixergänzung - der Parser erhält einen Genpräfix und leitet diesen an den GeneTranslator weiter, der eine Liste an Gennamen zurückgibt, die mit diesem Präfix beginnen.
+\end{itemize}
+Abhängig vom Anfragetyp packt der Parser die Ergebnisse der Anfrage in ein JSON-Antwort-Format und leitet diese an das Frontend zurück\\
+
+\subsection{Funktionen}
+\subsubsection{handleInput(JSON input)}
+Die Funktion erhält eine Anfrage vom Frontend im JSON-Format. Diese wird intern in der Funktion parseJSON() in ein internes Format übersetzt. Anhand dieses Formates wird ermittelt, um was für eine Anfrage es sich handelt und abhängig davon wird die Anfrage an die jeweiligen Systemkomponenten weitergegeben.\\
+Die Antwort wird intern der Funktion parseAnswer() übergeben, die diese in das JSON-Antwort-Format übersetzt. Das JSON-File wird daraufhin dem Frontend geschickt.\\
+\begin{algorithm}
+\If{JSON-File format is unknown}
+{return "unknown query format"\;}
+\If{format is of intervall-search format}
+{answer list = QueryHandler.handleQuery(int[] intervals, String[] source, int[] filter)\;}
+\If{format is of name-search format}
+{intervals = GeneTranslator.searchForGene(String name)\;
+answer list =QueryHandler.handleQuery(int[] intervals, String[] source, int[] filter)\;
+}
+\If{format is of prefix-search format}
+{answer list = GeneTranslator.searchForPrefix(String prefix)\;}
+parse answer list into output format\;
+return answer list\;
+\end{algorithm}\\
+Für die jeweiligen JSON-Formate siehe die Schnittstellen-Spezifikation zwischen Frontend und Middleware
+\end{document}
